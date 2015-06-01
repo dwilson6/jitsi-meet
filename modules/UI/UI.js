@@ -255,6 +255,24 @@ function registerListeners() {
     APP.xmpp.addListener(XMPPEvents.START_MUTED, function (audio, video) {
         SettingsMenu.setStartMuted(audio, video);
     });
+    APP.xmpp.addListener(XMPPEvents.SET_LOCAL_DESCRIPTION_ERROR, function() {
+        messageHandler.showError("dialog.error",
+                                    "dialog.SLDFailure");
+    });
+    APP.xmpp.addListener(XMPPEvents.SET_REMOTE_DESCRIPTION_ERROR, function() {
+        messageHandler.showError("dialog.error",
+            "dialog.SRDFailure");
+    });
+    APP.xmpp.addListener(XMPPEvents.ANSWER_ERROR, function() {
+        messageHandler.showError();
+    });
+    APP.xmpp.addListener(XMPPEvents.ANSWER_ERROR, function() {
+        messageHandler.showError();
+    });
+    APP.xmpp.addListener(XMPPEvents.PROMPT_FOR_LOGIN, function() {
+        // FIXME: re-use LoginDialog which supports retries
+        UI.showLoginPopup(connect);
+    });
 }
 
 

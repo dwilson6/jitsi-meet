@@ -9,6 +9,8 @@ var StreamEventTypes = require("../../service/RTC/StreamEventTypes");
 var RTCEvents = require("../../service/RTC/RTCEvents");
 var UIEvents = require("../../service/UI/UIEvents");
 var XMPPEvents = require("../../service/xmpp/XMPPEvents");
+var RTC = APP.RTC;
+var UI = APP.UI;
 var retry = require('retry');
 
 var eventEmitter = new EventEmitter();
@@ -30,7 +32,7 @@ function connect(jid, password) {
         if (connection.disco) {
             // for chrome, add multistream cap
         }
-        connection.jingle.pc_constraints = APP.RTC.getPCConstraints();
+        connection.jingle.pc_constraints = RTC.getPCConstraints();
         if (config.useIPv6) {
             // https://code.google.com/p/webrtc/issues/detail?id=2828
             if (!connection.jingle.pc_constraints.optional)
@@ -156,17 +158,17 @@ function connect(jid, password) {
 function maybeDoJoin() {
     if (connection && connection.connected &&
         Strophe.getResourceFromJid(connection.jid)
-        && (APP.RTC.localAudio || APP.RTC.localVideo)) {
+        && (RTC.localAudio || RTC.localVideo)) {
         // .connected is true while connecting?
         doJoin();
     }
 }
 
 function doJoin() {
-    var roomName = APP.UI.generateRoomName();
+    var roomName = UI.generateRoomName();
 
     Moderator.allocateConferenceFocus(
-        roomName, APP.UI.checkForNicknameAndJoin);
+        roomName, UI.checkForNicknameAndJoin);
 }
 
 function initStrophePlugins()
@@ -180,12 +182,12 @@ function initStrophePlugins()
 }
 
 function registerListeners() {
-    APP.RTC.addStreamListener(maybeDoJoin,
+    RTC.addStreamListener(maybeDoJoin,
         StreamEventTypes.EVENT_TYPE_LOCAL_CREATED);
-    APP.RTC.addListener(RTCEvents.AVAILABLE_DEVICES_CHANGED, function (devices) {
+    RTC.addListener(RTCEvents.AVAILABLE_DEVICES_CHANGED, function (devices) {
         XMPP.addToPresence("devices", devices);
     })
-    APP.UI.addListener(UIEvents.NICKNAME_CHANGED, function (nickname) {
+    UI.addListener(UIEvents.NICKNAME_CHANGED, function (nickname) {
         XMPP.addToPresence("displayName", nickname);
     });
 }
@@ -279,8 +281,7 @@ var XMPP = {
         return Strophe.getStatusString(status);
     },
     promptLogin: function () {
-        // FIXME: re-use LoginDialog which supports retries
-        APP.UI.showLoginPopup(connect);
+        eventEmitter.emit(XMPPEvents.PROMPT_FOR_LOGIN);
     },
     joinRoom: function(roomName, useNicks, nick)
     {
@@ -320,13 +321,13 @@ var XMPP = {
         if (handler && handler.peerconnection) {
             // FIXME: probably removing streams is not required and close() should
             // be enough
-            if (APP.RTC.localAudio) {
+            if (RTC.localAudio) {
                 handler.peerconnection.removeStream(
-                    APP.RTC.localAudio.getOriginalStream(), onUnload);
+                    RTC.localAudio.getOriginalStream(), onUnload);
             }
-            if (APP.RTC.localVideo) {
+            if (RTC.localVideo) {
                 handler.peerconnection.removeStream(
-                    APP.RTC.localVideo.getOriginalStream(), onUnload);
+                    RTC.localVideo.getOriginalStream(), onUnload);
             }
             handler.peerconnection.close();
         }
@@ -398,7 +399,7 @@ var XMPP = {
 
     },
     setAudioMute: function (mute, callback) {
-        if (!(connection && APP.RTC.localAudio)) {
+        if (!(connection && RTC.localAudio)) {
             return false;
         }
 
@@ -410,7 +411,7 @@ var XMPP = {
             this.forceMuted = false;
         }
 
-        if (mute == APP.RTC.localAudio.isMuted()) {
+        if (mute == RTC.localAudio.isMuted()) {
             // Nothing to do
             return true;
         }
@@ -418,7 +419,7 @@ var XMPP = {
         // It is not clear what is the right way to handle multiple tracks.
         // So at least make sure that they are all muted or all unmuted and
         // that we send presence just once.
-        APP.RTC.localAudio.setMute(!mute);
+        RTC.localAudio.setMute(!mute);
         // isMuted is the opposite of audioEnabled
         this.sendAudioInfoPresence(mute, callback);
         return true;
@@ -455,21 +456,19 @@ var XMPP = {
                             },
                             function (error) {
                                 console.log('mute SLD error');
-                                APP.UI.messageHandler.showError("dialog.error",
-                                    "dialog.SLDFailure");
+                                eventEmitter.emit(XMPPEvents.SET_LOCAL_DESCRIPTION_ERROR);
                             }
                         );
                     },
                     function (error) {
                         console.log(error);
-                        APP.UI.messageHandler.showError();
+                        eventEmitter.emit(XMPPEvents.ANSWER_ERROR);
                     }
                 );
             },
             function (error) {
                 console.log('muteVideo SRD error');
-                APP.UI.messageHandler.showError("dialog.error",
-                    "dialog.SRDFailure");
+                eventEmitter.emit(XMPPEvents.SET_REMOTE_DESCRIPTION_ERROR);
 
             }
         );

@@ -30,6 +30,10 @@ var XMPPEvents = {
     CHAT_ERROR_RECEIVED: "xmpp.chat_error_received",
     ETHERPAD: "xmpp.etherpad",
     DEVICE_AVAILABLE: "xmpp.device_available",
-    START_MUTED: "xmpp.start_muted"
+    START_MUTED: "xmpp.start_muted",
+    SET_LOCAL_DESCRIPTION_ERROR: 'xmpp.set_local_description_error',
+    SET_REMOTE_DESCRIPTION_ERROR: 'xmpp.set_remote_description_error',
+    ANSWER_ERROR: 'xmpp.answer_error',
+    PROMPT_FOR_LOGIN: 'xmpp.prompt_for_login'
 };
 module.exports = XMPPEvents;
